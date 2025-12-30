@@ -1,0 +1,34 @@
+# ============================================================================
+# Faster-Whisper ASR 配置文件
+# ============================================================================
+
+# 模型路径配置
+model:
+  whisper_path: models/faster-whisper-large-v3  # ASR模型路径
+
+# GPU设备分配
+device:
+  asr_model: cuda:0  # ASR模型使用的设备（cpu/cuda:0），推荐cuda:0如果GPU可用
+  default: cuda:0  # 默认设备
+
+# ASR（自动语音识别）配置
+asr:
+  enabled: true  # 是否启用ASR
+  language: zh  # 语言代码：zh（中文）, en（英文）, auto（自动检测）
+  initial_prompt: 以下是普通话的句子。  # 初始提示词，引导输出简体中文
+  beam_size: 5  # Beam search大小：1（最快）, 3（平衡推荐）, 5（高质量）, 10（最准确）
+  compute_type: float32  # 计算类型：float16（GPU快速）, int8（最快但精度略低）, float32（CPU兼容，最高精度）
+  vad_filter: false  # 是否使用Whisper内置VAD过滤
+
+# 音频处理配置
+audio:
+  input_path: data  # 输入音频路径：单个文件或文件夹路径
+  output_dir: output  # 输出目录，用于保存转录结果
+  supported_formats: [".wav", ".mp3", ".m4a", ".flac", ".ogg"]  # 支持的音频格式
+  sample_rate: 16000  # 目标采样率
+  recursive: true  # 是否递归处理子文件夹
+
+# 系统配置
+system:
+  log_level: INFO  # 日志级别：DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_file: logs/faster-whisper.log  # 日志文件路径
