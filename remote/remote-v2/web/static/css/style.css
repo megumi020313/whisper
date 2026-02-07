@@ -1,0 +1,380 @@
+/**
+ * 声纹卫士 VoiceGuard 样式
+ * 现代化、响应式设计，基于 Tailwind CSS
+ */
+
+/* ==================== 全局样式 ==================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #1e3a8a;
+    --secondary-color: #6c757d;
+    --success-color: #16a34a;
+    --info-color: #0284c7;
+    --warning-color: #f59e0b;
+    --error-color: #dc2626;
+    --bg-color: #f1f5f9;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --border-color: #e2e8f0;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+body {
+    font-family: 'Inter', 'Microsoft YaHei', sans-serif;
+    background-color: #f1f5f9;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+/* ==================== 顶部导航栏 ==================== */
+
+.nav-active {
+    border-bottom: 3px solid white !important;
+    opacity: 1 !important;
+}
+
+/* ==================== 人员颜色标识 ==================== */
+
+.color-user-1 { 
+    background-color: #3b82f6; 
+} /* 用户1 - 蓝色 */
+
+.color-user-2 { 
+    background-color: #10b981; 
+} /* 用户2 - 绿色 */
+
+.color-unknown { 
+    background-color: #94a3b8; 
+} /* 未知 - 灰色 */
+
+.timeline-container { 
+    background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px); 
+    background-size: 50px 100%; 
+}
+
+/* ==================== 选项卡切换 ==================== */
+
+.tab-btn {
+    transition: all 0.3s ease;
+}
+
+.tab-btn.active {
+    background-color: #2563eb !important;
+    color: white !important;
+    border-color: #2563eb !important;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block !important;
+}
+
+/* ==================== 文件上传区域 ==================== */
+
+.upload-dropzone.drag-over {
+    border-color: #3b82f6 !important;
+    background-color: #eff6ff !important;
+}
+
+/* ==================== 状态样式 ==================== */
+
+.status {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.status.ready {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status.recording {
+    background: #fef3c7;
+    color: #92400e;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status.warning {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.time {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    color: #2563eb;
+}
+
+/* ==================== 按钮样式 ==================== */
+
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==================== 结果显示区域 ==================== */
+
+.result-box {
+    padding: 1.5rem;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.result-box.success {
+    background: #d1fae5;
+    border: 2px solid #10b981;
+}
+
+.result-box.error {
+    background: #fee2e2;
+    border: 2px solid #ef4444;
+}
+
+.result-box.warning {
+    background: #fef3c7;
+    border: 2px solid #f59e0b;
+}
+
+.result-box.info {
+    background: #dbeafe;
+    border: 2px solid #3b82f6;
+}
+
+.result-box h3 {
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.result-box p {
+    margin-bottom: 0.5rem;
+}
+
+.result-details {
+    margin-top: 1rem;
+}
+
+.result-details p {
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ==================== 分段识别结果样式（表格形式） ==================== */
+
+.segments-section {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.segments-section h4 {
+    font-size: 1.125rem;
+    color: #374151;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.segments-table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: auto;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.segments-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.segments-table thead {
+    position: sticky;
+    top: 0;
+    background: #1e3a8a;
+    color: white;
+    z-index: 10;
+}
+
+.segments-table th {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.segments-table td {
+    padding: 0.625rem 0.5rem;
+    text-align: center;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.segments-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.segments-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* 不同类型的行样式 */
+.segments-table .row-recognized {
+    background-color: #d1fae5;
+}
+
+.segments-table .row-recognized:hover {
+    background-color: #a7f3d0;
+}
+
+.segments-table .row-unknown {
+    background-color: #fef3c7;
+}
+
+.segments-table .row-unknown:hover {
+    background-color: #fde68a;
+}
+
+.segments-table .row-silence {
+    background-color: #f3f4f6;
+    opacity: 0.8;
+}
+
+.segments-table .row-silence:hover {
+    background-color: #e5e7eb;
+}
+
+/* 滚动条样式 */
+.segments-table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.segments-table-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.segments-table-container::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+}
+
+.segments-table-container::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* 用户列表表格样式 */
+.speaker-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.speaker-table thead {
+    background: #f9fafb;
+    text-align: left;
+    font-size: 0.625rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.speaker-table th {
+    padding: 1rem 1.5rem;
+}
+
+.speaker-table td {
+    padding: 1rem 1.5rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.speaker-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.speaker-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.empty-message {
+    text-align: center;
+    padding: 2.5rem;
+    color: #6b7280;
+    font-size: 1.125rem;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .segments-table {
+        font-size: 0.75rem;
+    }
+    
+    .segments-table th,
+    .segments-table td {
+        padding: 0.5rem 0.25rem;
+    }
+    
+    .speaker-table {
+        font-size: 0.75rem;
+    }
+    
+    .speaker-table th,
+    .speaker-table td {
+        padding: 0.5rem;
+    }
+}
+

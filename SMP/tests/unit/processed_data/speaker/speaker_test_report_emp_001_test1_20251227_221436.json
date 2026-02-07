@@ -1,0 +1,40 @@
+{
+  "test_info": {
+    "test_time": "2025-12-27T22:14:40.048994",
+    "test_audio": "emp_001_test1",
+    "test_audio_path": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test1.wav",
+    "model_path": "/home/swufe/Project/zhoulonghao/SMP/backend/training/models/speechbrain_model_20251215_150150/speaker_embeddings.json",
+    "threshold": 0.85,
+    "sample_rate": 16000
+  },
+  "results": {
+    "total_speakers": 1,
+    "samples_evaluated": 1,
+    "correct": 0,
+    "wrong": 1,
+    "accuracy": 0.0,
+    "target_accuracy": 98,
+    "passed": false
+  },
+  "details": {
+    "all_samples": [
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test1.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.6064,
+        "correct": false
+      }
+    ],
+    "correct_samples": [],
+    "wrong_samples": [
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test1.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.6064,
+        "correct": false
+      }
+    ]
+  }
+}

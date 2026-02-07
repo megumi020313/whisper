@@ -1,0 +1,29 @@
+{
+  "training_summary": {
+    "total_epochs": 16,
+    "final_train_loss": 0.12365199247524686,
+    "final_train_accuracy": 3.4671532846715327,
+    "final_val_loss": 0.20035563679277033,
+    "final_val_accuracy": 99.72602739726028
+  },
+  "best_performance": {
+    "best_val_accuracy": 99.81735159817352,
+    "best_val_epoch": 6,
+    "best_val_loss": 0.1893342629722927
+  },
+  "training_config": {
+    "batch_size": 16,
+    "learning_rate": "3e-5",
+    "optimizer": "adamw",
+    "scheduler": "cosine",
+    "mixed_precision": true,
+    "gradient_accumulation_steps": 2
+  },
+  "validation_config": {
+    "compute_metrics": true,
+    "multi_metric_early_stop": true
+  },
+  "recommendations": [
+    "验证损失上升，可能存在过拟合，建议增加数据增强或早停"
+  ]
+}

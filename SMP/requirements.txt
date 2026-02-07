@@ -1,0 +1,29 @@
+numpy==1.26.4
+soundfile==0.13.1
+pyyaml==6.0.3
+speechbrain==1.0.3
+python_speech_features==0.6
+onnx==1.17.0
+onnxscript==0.2.1
+onnxruntime==1.17.0
+webrtcvad==2.0.10 # 可选依赖
+
+#pip install torch==2.4.1 torchaudio==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu121
+#torch==2.4.1+cu122
+#torchaudio==2.4.1+cu122
+#torchvision==0.19.1+cu122
+
+scikit-learn==1.7.2
+noisereduce==3.0.3
+tqdm==4.67.1
+librosa==0.10.1
+#pyaudio==0.2.14 # 可选依赖
+matplotlib==3.10.7
+seaborn==0.13.2
+
+# Web服务依赖 (Flask框架)
+flask==3.1.0
+flask-cors==5.0.0
+gunicorn==23.0.0
+
+#fred-framework

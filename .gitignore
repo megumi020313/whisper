@@ -1,0 +1,9 @@
+# Ignore local tooling
+/remote/.cursor/
+
+# Ignore large outputs
+/remote/remote-v2/logs/
+/remote/remote-v2/models/
+
+# Ignore audio
+*.wav

@@ -1,0 +1,749 @@
+// 极简 UI 控制，匹配新版前端布局
+
+class SimpleUI {
+    constructor() {
+        this.recordBtn = document.getElementById('record-btn');
+        this.recordTimer = document.getElementById('record-timer');
+        this.recordStatus = document.getElementById('record-status');
+        this.dropzone = document.getElementById('dropzone');
+        this.fileInfo = document.getElementById('file-info');
+        this.audioReady = document.getElementById('audio-ready');
+        this.audioPlayer = document.getElementById('audio-player');
+        this.audioDuration = document.getElementById('audio-duration');
+        this.resetAudioBtn = document.getElementById('reset-audio');
+        this.analyzeBtn = document.getElementById('analyze-btn');
+        this.reportHint = document.getElementById('report-hint');
+        this.reportLoading = document.getElementById('report-loading');
+        this.reportContent = document.getElementById('report-content');
+        this.summary = document.getElementById('summary-metrics');
+        this.timelineBar = document.getElementById('timeline-bar');
+        this.timelineLegend = document.getElementById('timeline-legend');
+        this.segmentRows = document.getElementById('segment-rows');
+        this.exportCsv = document.getElementById('export-csv');
+        this.manageUsersLink = document.getElementById('manage-users-link');
+        this.userModal = document.getElementById('user-modal');
+        this.closeModalBtn = document.getElementById('close-modal');
+        this.userList = document.getElementById('user-list');
+    }
+
+    setRecording(isRecording) {
+        if (!this.recordBtn) return;
+        this.recordBtn.textContent = isRecording ? '■ 停止录音' : '🎤 点击开始录音';
+        this.recordBtn.classList.toggle('danger', isRecording);
+    }
+
+    updateTimer(seconds) {
+        if (!this.recordTimer) return;
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+        this.recordTimer.textContent = `${m}:${s}`;
+    }
+
+    setStatus(text, cls = '') {
+        if (!this.recordStatus) return;
+        this.recordStatus.textContent = text;
+        this.recordStatus.className = `badge ${cls}`.trim();
+    }
+
+    showAudio(url, duration) {
+        if (this.audioPlayer) {
+            this.audioPlayer.src = url;
+        }
+        if (this.audioDuration) {
+            this.audioDuration.textContent = duration ? `${duration.toFixed(1)} s` : '';
+        }
+        if (this.audioReady) this.audioReady.style.display = 'block';
+        if (this.analyzeBtn) this.analyzeBtn.disabled = false;
+    }
+
+    hideAudio() {
+        if (this.audioReady) this.audioReady.style.display = 'none';
+        if (this.audioPlayer) this.audioPlayer.src = '';
+        if (this.audioDuration) this.audioDuration.textContent = '';
+        if (this.analyzeBtn) this.analyzeBtn.disabled = true;
+    }
+
+    setFileInfo(file) {
+        if (!this.fileInfo) return;
+        if (!file) {
+            this.fileInfo.style.display = 'none';
+            this.fileInfo.innerHTML = '';
+            return;
+        }
+        const size = (file.size / 1024).toFixed(1);
+        this.fileInfo.style.display = 'block';
+        this.fileInfo.innerHTML = `<p>📄 ${file.name}</p><p>📊 ${size} KB</p>`;
+    }
+
+    showLoading(show) {
+        if (this.reportLoading) this.reportLoading.style.display = show ? 'block' : 'none';
+        if (this.reportContent) this.reportContent.style.display = show ? 'none' : this.reportContent.style.display;
+    }
+
+    showReportPlaceholder() {
+        if (this.reportHint) this.reportHint.textContent = '分析报告将在此处生成';
+        if (this.reportContent) this.reportContent.style.display = 'none';
+    }
+
+    renderReport(data) {
+        if (this.reportHint) this.reportHint.textContent = '分析完成';
+        if (this.reportContent) this.reportContent.style.display = 'block';
+
+        // Summary
+        const speakers = data.speakers || ['未知'];
+        const duration = data.duration || 0;
+        const count = speakers.length;
+        this.summary.innerHTML = `🗣️ 检测到的说话人: ${speakers.map((s,i)=>`<span class="pill pill-${i%5}">${s}</span>`).join(' ')} | 🎙️ 说话人数量: ${count} | ⏱️ 有效语音时长: ${duration.toFixed ? duration.toFixed(1) : duration}s`;
+
+        // Timeline (simple blocks)
+        this.timelineBar.innerHTML = '';
+        const segments = data.segments && data.segments.length ? data.segments : [{speaker: speakers[0], start:0, end: duration||1, score: data.score||1}];
+        const total = segments[segments.length-1].end || 1;
+        segments.forEach((seg, idx) => {
+            const width = Math.max(5, ((seg.end - seg.start) / total) * 100);
+            const block = document.createElement('div');
+            block.className = `seg seg-${idx%5}`;
+            block.style.width = `${width}%`;
+            block.title = `${seg.speaker || '未知'} | ${seg.start?.toFixed(2)}s - ${seg.end?.toFixed(2)}s`;
+            this.timelineBar.appendChild(block);
+        });
+        this.timelineLegend.innerHTML = [...new Set(segments.map(s=>s.speaker||'未知'))]
+            .map((s,i)=>`<span class="pill pill-${i%5}">${s}</span>`).join('');
+
+        // Table
+        this.segmentRows.innerHTML = '';
+        segments.forEach((seg, idx) => {
+            const tr = document.createElement('tr');
+            const cells = [
+                idx+1,
+                `${(seg.start||0).toFixed(1)}s - ${(seg.end||0).toFixed(1)}s`,
+                seg.abs_start || '-',
+                seg.abs_end || '-',
+                `${((seg.end||0)-(seg.start||0)).toFixed(1)}s`,
+                seg.speaker || '未知',
+                seg.score ? `${(seg.score*100).toFixed(1)}%` : '-',
+                seg.z || '-',
+                seg.windows || '-'
+            ];
+            cells.forEach(c => {
+                const td = document.createElement('td');
+                td.innerHTML = c;
+                tr.appendChild(td);
+            });
+            this.segmentRows.appendChild(tr);
+        });
+    }
+}
+
+class App {
+    constructor() {
+        this.api = new VoiceprintAPI();
+        this.recorder = new AudioRecorder();
+        this.ui = new SimpleUI();
+        this.audioBlob = null;
+        this.timer = null;
+        this.isRecording = false;
+    }
+
+    init() {
+        this.bind();
+        this.ui.showReportPlaceholder();
+    }
+
+    bind() {
+        document.getElementById('record-btn')?.addEventListener('click', () => this.toggleRecord());
+        document.getElementById('select-file-btn')?.addEventListener('click', () => this.selectFile());
+        document.getElementById('audio-file-input')?.addEventListener('change', (e)=>this.handleFile(e.target.files[0]));
+        document.getElementById('reset-audio')?.addEventListener('click', ()=>this.resetAudio());
+        document.getElementById('analyze-btn')?.addEventListener('click', ()=>this.handleAnalyze());
+        document.getElementById('manage-users-link')?.addEventListener('click', ()=>this.loadUsers());
+        document.getElementById('close-modal')?.addEventListener('click', ()=>this.toggleModal(false));
+        document.getElementById('export-csv')?.addEventListener('click', ()=>this.exportCsv());
+        const dz = document.getElementById('dropzone');
+        if (dz) {
+            dz.addEventListener('dragover', e=>{e.preventDefault(); dz.classList.add('drag');});
+            dz.addEventListener('dragleave', e=>{e.preventDefault(); dz.classList.remove('drag');});
+            dz.addEventListener('drop', e=>{e.preventDefault(); dz.classList.remove('drag'); const f=e.dataTransfer.files[0]; if(f) this.handleFile(f);});
+            dz.addEventListener('click', ()=>this.selectFile());
+        }
+    }
+
+    async toggleRecord() {
+        if (this.isRecording) {
+            await this.stopRecord();
+            return;
+        }
+        try {
+            await this.recorder.startRecording();
+            this.isRecording = true;
+            this.ui.setRecording(true);
+            this.ui.setStatus('正在录音...', 'recording');
+            const start = Date.now();
+            this.timer = setInterval(()=>{
+                const sec = (Date.now()-start)/1000;
+                this.ui.updateTimer(sec);
+            },200);
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    async stopRecord() {
+        try {
+            const res = await this.recorder.stopRecording();
+            this.audioBlob = res.blob;
+            this.isRecording = false;
+            this.ui.setRecording(false);
+            if (this.timer) clearInterval(this.timer);
+            const dur = await this.recorder.getAudioDuration();
+            this.ui.updateTimer(dur);
+            this.ui.setStatus('录音完成', 'ready');
+            this.ui.showAudio(res.url, dur);
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    selectFile() {
+        document.getElementById('audio-file-input')?.click();
+    }
+
+    handleFile(file) {
+        if (!file) return;
+        const max = 50*1024*1024;
+        if (file.size>max) {alert('文件超过50MB'); return;}
+        this.audioBlob = file;
+        this.ui.setFileInfo(file);
+        const url = URL.createObjectURL(file);
+        const audio = new Audio(url);
+        audio.onloadedmetadata = ()=>{
+            this.ui.showAudio(url, audio.duration);
+        };
+        audio.onerror = ()=>{
+            this.ui.showAudio(url, 0);
+        };
+    }
+
+    resetAudio() {
+        this.audioBlob = null;
+        this.ui.hideAudio();
+        this.ui.setFileInfo(null);
+    }
+
+    async handleAnalyze() {
+        if (!this.audioBlob) {alert('请先录音或上传音频'); return;}
+        this.ui.showLoading(true);
+        try {
+            const res = await this.api.recognizeSpeaker(this.audioBlob);
+            const parsed = this.parseResult(res);
+            this.ui.showLoading(false);
+            this.ui.renderReport(parsed);
+        } catch (e) {
+            this.ui.showLoading(false);
+            alert(e.message);
+        }
+    }
+
+    parseResult(res) {
+        // 尝试从后端结果提取多段；若无，则构造单段
+        if (res && res.segments) return {
+            speakers: [...new Set(res.segments.map(s=>s.speaker||s.label||'未知'))],
+            duration: res.duration || (res.segments.length? res.segments[res.segments.length-1].end:0),
+            segments: res.segments.map(s=>({
+                speaker: s.speaker||s.label||'未知',
+                start: s.start||0,
+                end: s.end||0,
+                score: s.score||s.confidence||0,
+                z: s.z || s.logit || '-',
+                windows: s.windows || s.frames || '-'
+            }))
+        };
+        const top = (res?.results && res.results[0]) || res?.top1 || res;
+        const speaker = top?.user_id || top?.speaker || top?.label || '未知';
+        const score = top?.score || top?.similarity || 0;
+        const duration = this.ui?.audioPlayer?.duration || 0;
+        return {
+            speakers: [speaker],
+            duration,
+            score,
+            segments: [{speaker, start:0, end: (duration||1), score}]
+        };
+    }
+
+    async loadUsers() {
+        try {
+            const data = await this.api.getSpeakerList();
+            const list = data?.users || data?.data || [];
+            this.userList.innerHTML = list.length ? list.map(u=>`<div class="user-row">👤 ${u}</div>`).join('') : '暂无用户';
+            this.toggleModal(true);
+        } catch (e) {
+            alert(e.message);
+        }
+    }
+
+    toggleModal(show) {
+        if (this.userModal) this.userModal.style.display = show ? 'block' : 'none';
+    }
+
+    exportCsv() {
+        if (!this.ui.segmentRows || !this.ui.segmentRows.children.length) return;
+        const rows = Array.from(this.ui.segmentRows.children).map(tr=>Array.from(tr.children).map(td=>td.textContent));
+        const header = ['片段','相对时间','绝对开始时间','绝对结束时间','时长','识别为','得分(%)','原始Z','窗口数'];
+        const csv = [header.join(','), ...rows.map(r=>r.join(','))].join('\n');
+        const blob = new Blob([csv], {type:'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'analysis.csv'; a.click();
+        URL.revokeObjectURL(url);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const app = new App();
+    app.init();
+});
+    
+    /**
+     * 显示文件信息
+     */
+    showFileInfo(file) {
+        const fileInfoDiv = document.getElementById('file-info');
+        const fileNameSpan = document.getElementById('file-name');
+        const fileSizeSpan = document.getElementById('file-size');
+        
+        if (fileInfoDiv && fileNameSpan && fileSizeSpan) {
+            fileNameSpan.textContent = file.name;
+            fileSizeSpan.textContent = (file.size / 1024).toFixed(1) + ' KB';
+            fileInfoDiv.style.display = 'block';
+        }
+    }
+    
+    /**
+     * 清除文件
+     */
+    handleClearFile() {
+        this.uploadedFile = null;
+        this.uploadedAudioBlob = null;
+        this.lastProcessedFile = null; // 重置文件标识，允许重新选择
+        
+        const fileInput = document.getElementById('audio-file-input');
+        const fileInfoDiv = document.getElementById('file-info');
+        
+        if (fileInput) fileInput.value = '';
+        if (fileInfoDiv) fileInfoDiv.style.display = 'none';
+        
+        this.ui.hideAudioPreview();
+        this.ui.setFunctionButtonsEnabled(false);
+        
+        console.log('✅ 文件已清除，可以重新选择');
+    }
+    
+    /**
+     * 处理拖拽悬停
+     */
+    handleDragOver(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.classList.add('drag-over');
+    }
+    
+    /**
+     * 处理拖拽离开
+     */
+    handleDragLeave(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.classList.remove('drag-over');
+    }
+    
+    /**
+     * 处理拖拽放下
+     */
+    handleDrop(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.classList.remove('drag-over');
+        
+        const files = event.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            console.log(`📥 拖拽文件: ${file.name}`);
+            
+            // 直接处理文件，不通过input元素（避免重复触发）
+            this.handleFileSelected({ target: { files: [file] } });
+        }
+    }
+    
+    /**
+     * 处理开始录音
+     */
+    async handleStartRecord() {
+        try {
+            this.ui.hideResult();
+            this.ui.hideAudioPreview();
+            
+            await this.recorder.startRecording();
+            
+            this.ui.updateRecordStatus('recording', '正在录音...');
+            this.ui.toggleButtons(true);
+            
+            // 开始计时
+            this.recordingStartTime = Date.now();
+            this.recordingTimer = setInterval(() => {
+                const elapsed = (Date.now() - this.recordingStartTime) / 1000;
+                this.ui.updateRecordTime(elapsed);
+                
+                // 提示推荐时长
+                if (elapsed >= this.recommendedDuration && elapsed < this.maxRecommendedDuration) {
+                    this.ui.updateRecordStatus('recording', `正在录音... (建议录制${this.recommendedDuration}-${this.maxRecommendedDuration}秒)`);
+                } else if (elapsed >= this.maxRecommendedDuration) {
+                    this.ui.updateRecordStatus('recording', '正在录音... (已达到推荐时长，可以停止了)');
+                }
+            }, 100);
+            
+        } catch (error) {
+            this.ui.showError(error.message);
+            this.ui.updateRecordStatus('error', '录音失败');
+            console.error('开始录音失败:', error);
+        }
+    }
+    
+    /**
+     * 处理停止录音
+     */
+    async handleStopRecord() {
+        try {
+            // 停止计时
+            if (this.recordingTimer) {
+                clearInterval(this.recordingTimer);
+                this.recordingTimer = null;
+            }
+            
+            const result = await this.recorder.stopRecording();
+            
+            this.ui.toggleButtons(false);
+            this.ui.updateRecordStatus('ready', '录音完成');
+            
+            // 获取时长
+            const duration = await this.recorder.getAudioDuration();
+            
+            // 显示预览
+            this.ui.showAudioPreview(result.url, duration);
+            
+            // 启用功能按钮
+            this.ui.setFunctionButtonsEnabled(true);
+            
+            // 检查时长
+            if (duration < this.recommendedDuration) {
+                this.ui.showResult('warning', '提示', 
+                    `录音时长较短(${duration.toFixed(1)}秒)，建议录制${this.recommendedDuration}-${this.maxRecommendedDuration}秒以提高识别准确率`);
+            }
+            
+        } catch (error) {
+            this.ui.showError(error.message);
+            this.ui.updateRecordStatus('error', '停止录音失败');
+            console.error('停止录音失败:', error);
+        }
+    }
+    
+    /**
+     * 处理声纹注册
+     */
+    async handleRegister() {
+        try {
+            // 验证用户名
+            if (!this.ui.validateSpeakerId()) {
+                return;
+            }
+            
+            const speakerId = this.ui.getSpeakerId();
+            
+            // ✨ 智能选择音频源：优先使用实际存在的音频数据
+            let audioBlob = null;
+            let audioSource = '';
+            
+            // 策略：优先检查当前选项卡的音频，如果没有则检查另一个选项卡
+            if (this.activeTab === 'upload') {
+                // 当前在上传选项卡
+                if (this.uploadedAudioBlob) {
+                    audioBlob = this.uploadedAudioBlob;
+                    audioSource = '上传文件';
+                } else if (this.recorder.getAudioBlob()) {
+                    // 回退：如果上传选项卡没有文件，但有录音，则使用录音
+                    audioBlob = this.recorder.getAudioBlob();
+                    audioSource = '浏览器录音（回退）';
+                }
+            } else {
+                // 当前在录音选项卡
+                if (this.recorder.getAudioBlob()) {
+                    audioBlob = this.recorder.getAudioBlob();
+                    audioSource = '浏览器录音';
+                } else if (this.uploadedAudioBlob) {
+                    // 回退：如果录音选项卡没有录音，但有上传的文件，则使用上传的文件
+                    audioBlob = this.uploadedAudioBlob;
+                    audioSource = '上传文件（回退）';
+                }
+            }
+            
+            if (!audioBlob) {
+                this.ui.showError('请先录音或上传音频文件');
+                return;
+            }
+            
+            console.log(`📌 使用音频源: ${audioSource}`);
+            
+            // 显示加载
+            this.ui.showLoading(`正在注册用户 "${speakerId}"...`);
+            this.ui.setFunctionButtonsEnabled(false);
+            
+            // 调用API
+            const result = await this.api.registerSpeaker(speakerId, audioBlob);
+            
+            console.log('注册结果:', result);
+            
+            // 显示成功
+            this.ui.showSuccess(`用户 "${speakerId}" 注册成功！`);
+            
+            // 清理（保留音频流，避免重新授权）
+            this.recorder.cleanup(true);  // true = 保留音频流
+            this.handleClearFile(); // 清除上传的文件
+            this.ui.hideAudioPreview();
+            this.ui.updateRecordTime(0);
+            
+        } catch (error) {
+            this.ui.showError(error.message);
+            console.error('注册失败:', error);
+        } finally {
+            this.ui.setFunctionButtonsEnabled(true);
+        }
+    }
+    
+    /**
+     * 处理声纹识别
+     */
+    async handleRecognize() {
+        try {
+            // ✨ 智能选择音频源：优先使用实际存在的音频数据
+            let audioBlob = null;
+            let audioSource = '';
+            let audioDuration = 0;
+            
+            // 策略：优先检查当前选项卡的音频，如果没有则检查另一个选项卡
+            if (this.activeTab === 'upload') {
+                // 当前在上传选项卡
+                if (this.uploadedAudioBlob) {
+                    // 使用上传的文件
+                    audioBlob = this.uploadedAudioBlob;
+                    audioSource = '上传文件';
+                    
+                    // 获取上传文件的时长
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    await new Promise((resolve) => {
+                        audio.addEventListener('loadedmetadata', () => {
+                            audioDuration = audio.duration;
+                            resolve();
+                        });
+                    });
+                    URL.revokeObjectURL(audioUrl);
+                } else if (this.recorder.getAudioBlob()) {
+                    // 回退：如果上传选项卡没有文件，但有录音，则使用录音
+                    audioBlob = this.recorder.getAudioBlob();
+                    audioSource = '浏览器录音（回退）';
+                    audioDuration = await this.recorder.getAudioDuration();
+                }
+            } else {
+                // 当前在录音选项卡
+                if (this.recorder.getAudioBlob()) {
+                    // 使用录音
+                    audioBlob = this.recorder.getAudioBlob();
+                    audioSource = '浏览器录音';
+                    audioDuration = await this.recorder.getAudioDuration();
+                } else if (this.uploadedAudioBlob) {
+                    // 回退：如果录音选项卡没有录音，但有上传的文件，则使用上传的文件
+                    audioBlob = this.uploadedAudioBlob;
+                    audioSource = '上传文件（回退）';
+                    
+                    // 获取上传文件的时长
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    await new Promise((resolve) => {
+                        audio.addEventListener('loadedmetadata', () => {
+                            audioDuration = audio.duration;
+                            resolve();
+                        });
+                    });
+                    URL.revokeObjectURL(audioUrl);
+                }
+            }
+            
+            if (!audioBlob) {
+                this.ui.showError('请先录音或上传音频文件');
+                return;
+            }
+            
+            console.log(`📌 使用音频源: ${audioSource}, 时长: ${audioDuration.toFixed(1)}秒`);
+            
+            // ✨ 检查音频时长（建议至少10秒）
+            const minDuration = 10;  // 最短10秒
+            const recommendedDuration = 15;  // 推荐15秒以上
+            
+            if (audioDuration < minDuration) {
+                this.ui.showError(
+                    `⚠️ 音频时长太短 (${audioDuration.toFixed(1)}秒)\n\n` +
+                    `为了提高识别准确率，建议：\n` +
+                    `• 最少录制 ${minDuration} 秒\n` +
+                    `• 推荐录制 ${recommendedDuration}-30 秒\n` +
+                    `• 音频越长，识别越准确\n\n` +
+                    `当前音频时长不足，可能导致识别失败或准确率低。`
+                );
+                return;
+            }
+            
+            // 如果音频时长在10-15秒之间，给出警告但允许继续
+            if (audioDuration < recommendedDuration) {
+                console.warn(`⚠️ 音频时长偏短 (${audioDuration.toFixed(1)}秒)，建议录制${recommendedDuration}秒以上以提高准确率`);
+            }
+            
+            // 显示加载
+            this.ui.showLoading('正在识别...');
+            this.ui.setFunctionButtonsEnabled(false);
+            
+            // 调用API
+            const result = await this.api.recognizeSpeaker(audioBlob);
+            
+            console.log('识别结果:', result);
+            
+            // 显示结果
+            if (result.success) {
+                const data = result.data;
+                const details = result.details || {};
+                const speakerId = data.speaker_id;
+                const confidence = data.confidence.toFixed(1);
+                
+                // 准备基本信息
+                const basicInfo = {
+                    '主要识别用户': speakerId === 'unknown' ? '未识别到注册用户' : speakerId,
+                    '整体相似度': `${confidence}%`,
+                    '置信度': confidence >= 70 ? '高' : (confidence >= 50 ? '中' : '低'),
+                    '识别模式': details.mode || 'N/A',
+                    '检测到的说话人': details.detected_speakers ? details.detected_speakers.join(', ') : 'N/A',
+                    '说话人数量': details.total_speakers || 0
+                };
+                
+                // 显示结果（包含分段详情）
+                if (speakerId === 'unknown') {
+                    this.ui.showRecognitionResult('warning', '识别结果', basicInfo, details.segments);
+                } else {
+                    this.ui.showRecognitionResult('success', '识别结果', basicInfo, details.segments);
+                }
+            } else {
+                this.ui.showError('识别失败: ' + (result.error || '未知错误'));
+            }
+            
+        } catch (error) {
+            this.ui.showError(error.message);
+            console.error('识别失败:', error);
+        } finally {
+            this.ui.setFunctionButtonsEnabled(true);
+        }
+    }
+    
+    /**
+     * 处理获取说话人列表
+     */
+    async handleListSpeakers() {
+        try {
+            this.ui.showLoading('正在获取用户列表...');
+            
+            const result = await this.api.getSpeakerList();
+            
+            console.log('说话人列表:', result);
+            
+            if (result.success) {
+                const speakers = result.data.speakers;
+                
+                if (speakers.length === 0) {
+                    this.ui.showResult('info', '提示', '系统中暂无注册用户');
+                } else {
+                    this.ui.hideResult();
+                    
+                    // 设置删除回调
+                    this.ui.onDeleteSpeaker = (speakerId) => this.handleDeleteSpeaker(speakerId);
+                    
+                    this.ui.showSpeakerList(speakers);
+                }
+            } else {
+                this.ui.showError('获取列表失败: ' + (result.error || '未知错误'));
+            }
+            
+        } catch (error) {
+            this.ui.showError(error.message);
+            console.error('获取列表失败:', error);
+        }
+    }
+    
+    /**
+     * 处理删除说话人
+     */
+    async handleDeleteSpeaker(speakerId) {
+        try {
+            // 确认删除
+            if (!confirm(`确定要删除用户 "${speakerId}" 吗？\n删除后无法恢复！`)) {
+                return;
+            }
+            
+            this.ui.showLoading(`正在删除用户 "${speakerId}"...`);
+            
+            const result = await this.api.deleteSpeaker(speakerId);
+            
+            console.log('删除结果:', result);
+            
+            if (result.success) {
+                this.ui.showSuccess(`用户 "${speakerId}" 已删除`);
+                
+                // 重新加载用户列表
+                setTimeout(() => {
+                    this.handleListSpeakers();
+                }, 1000);
+            } else {
+                this.ui.showError('删除失败: ' + (result.error || '未知错误'));
+            }
+            
+        } catch (error) {
+            this.ui.showError(error.message);
+            console.error('删除失败:', error);
+        }
+    }
+    
+    /**
+     * 清理资源
+     */
+    cleanup() {
+        if (this.recordingTimer) {
+            clearInterval(this.recordingTimer);
+        }
+        
+        if (this.recorder) {
+            // 页面卸载时完全清理（false = 不保留音频流）
+            this.recorder.cleanup(false);
+        }
+        
+        if (this.ui) {
+            this.ui.cleanup();
+        }
+    }
+}
+
+// 注释掉重复的初始化代码，使用前面的 App 类
+// let app = null;
+// document.addEventListener('DOMContentLoaded', async () => {
+//     app = new VoiceprintApp();
+//     await app.init();
+// });
+// window.addEventListener('beforeunload', () => {
+//     if (app) {
+//         app.cleanup();
+//     }
+// });
+

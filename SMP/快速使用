@@ -1,0 +1,32 @@
+启动api服务：
+cd /home/swufe/Project/zhoulonghao/SMP
+conda activate vioce
+python -m backend.api.app
+
+
+更换模型、参数：
+编辑 backend/config/model_config.yaml
+
+# 模型选择
+model_selection:
+  selected_model: "speechbrain_model_20251214_140340"  # 或 null 表示自动选择最新模型
+
+# 识别参数
+recognition:
+  similarity_threshold: 0.75  # 相似度阈值
+
+# 音频参数
+audio:
+  sample_rate: 16000  # 采样率
+
+更换端口：
+编辑 backend/config/web_config.py
+
+# Flask配置
+FLASK_HOST = "0.0.0.0"
+FLASK_PORT = 51003
+FLASK_DEBUG = False
+
+测试：
+python tests/unit/test_speaker.py --test-file /home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test1.wav
+

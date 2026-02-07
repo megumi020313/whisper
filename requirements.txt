@@ -1,0 +1,104 @@
+# 根目录依赖（对齐 1.txt 的可运行环境）
+#
+# 目标：让 remote/remote-v2 + SMP 在“已验证可运行的环境”下可复现安装。
+#
+# 规则：
+# - 不参考历史 requirements/README 清单；以源码 import 反推为基础
+# - 以 1.txt 的可运行 pip list 为基准进行精简
+# - 对保留依赖统一锁定到 1.txt 中一致版本（==）
+#
+# 注：系统级依赖（FFmpeg、PortAudio、CUDA 驱动等）见《部署指南_Windows_macOS.md》
+
+# -------------------------
+# Web 服务（Remote-V2: FastAPI / SMP: Flask）
+# -------------------------
+fastapi==0.125.0
+uvicorn==0.38.0
+python-multipart==0.0.21
+
+# uvicorn[standard] 的常用额外依赖（按 1.txt 锁版本）
+httptools==0.7.1
+watchfiles==1.1.1
+websockets==15.0.1
+uvloop==0.22.1; platform_system != "Windows"
+
+Flask==3.1.2
+flask-cors==6.0.2
+Werkzeug==3.1.4
+
+# 生产部署常用进程管理
+gunicorn==23.0.0
+
+# -------------------------
+# 日志 / 配置 / 网络
+# -------------------------
+loguru==0.7.3
+PyYAML==6.0.3
+packaging==25.0
+
+requests==2.32.5
+httpx==0.28.1
+urllib3==2.6.2
+
+# -------------------------
+# 存储
+# -------------------------
+redis==7.1.0
+
+# -------------------------
+# 数值计算 / 音频
+# -------------------------
+numpy==2.2.6
+scipy==1.16.3
+pandas==2.3.3
+
+soundfile==0.13.1
+librosa==0.10.1
+python_speech_features==0.6
+
+# -------------------------
+# 机器学习 / 可视化（部分流程会用到）
+# -------------------------
+scikit-learn==1.7.2
+matplotlib==3.10.7
+seaborn==0.13.2
+tqdm==4.67.1
+
+# -------------------------
+# 深度学习 / 推理（按 1.txt 环境锁版本）
+# -------------------------
+# 注意：CPU 版本（适用于 AMD 显卡或纯 CPU 环境）
+# torch 2.8.0 官方兼容版本：torchvision 0.23.0, torchaudio 2.8.0
+# 如需 NVIDIA GPU 加速，请参考部署指南从 PyTorch 官方索引安装 CUDA 版本
+torch==2.8.0
+torchaudio==2.8.0
+torchvision==0.23.0
+torchcodec==0.7.0
+
+speechbrain==1.0.3
+
+# FunASR/ASR
+funasr==1.0.20
+modelscope==1.15.0
+jieba==0.42.1
+
+# 推理辅助
+onnxruntime==1.17.0
+webrtcvad==2.0.10
+
+# -------------------------
+# 可选依赖（当前 1.txt 环境未必需要/仅特定场景）
+# -------------------------
+# GPU 动态库（Linux GPU 环境；remote-v2 代码会尝试 import nvidia.cudnn/cublas，但缺失会降级）：
+# nvidia-cudnn-cu12==9.10.2.21
+# nvidia-cublas-cu12==12.8.4.1
+
+# 麦克风实时采集示例需要（安装成本高，需要 PortAudio）：
+# pyaudio
+
+# 训练/实验脚本可能用到，但 1.txt 环境未安装：
+# omegaconf
+# audiomentations
+# halo
+# tinygrad
+# importlib_resources

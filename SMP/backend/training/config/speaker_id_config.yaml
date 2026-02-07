@@ -1,0 +1,93 @@
+# SpeechBrain 声纹模型配置文件
+model:
+  # 预训练模型配置
+  pretrained_path: ../model/speechbrain/embedding_model.ckpt  # 预训练模型路径
+  encoder_root: ../model/speechbrain
+
+  base_output_dir: ../models  # 基础保存目录，时间戳子目录将在此创建
+
+  freeze_layers: true           # 关键修改：设为true冻结底层参数
+  unfreeze_layers: ['fc', 'blocks.3', 'blocks.4', 'blocks.2.se_block', 'classifier']  # 解冻更多高层，强化可训练容量
+  skip_onnx_export: false       # 是否跳过ONNX模型导出
+
+training:
+  # 数据配置
+  dataset_path: ../raw_data/speaker # 说话人音频文件夹（支持递归搜索子目录）
+  sample_rate: 16000
+  embedding_dim: 192            # ECAPA-TDNN模型嵌入维度
+  min_samples: 5                # 每个说话人至少需要的样本数量
+
+  # 样本数量限制配置（用于平衡数据集）
+  max_samples_per_speaker: 50   # 每个说话人最多使用的样本数量（None表示不限制）
+  limit_negative_samples: true  # 是否只限制负样本（VCTK）的样本数量，目标员工不受限制（true：只限制VCTK；false：限制所有说话人）
+
+  adaptation_mode: fine_tune    # 适配模式: fine_tune, feature_extract
+  skip_template_store: false    # 是否跳过生成模板存储
+  
+  # 训练循环配置（针对双Tesla V100+2个目标员工+限制VCTK样本+多人对话增强优化）
+  batch_size: 32                # 批量大小（多GPU训练，每张GPU分配16，总batch_size=32，提高GPU利用率）
+  epochs: 40                    # 训练轮数（回退到最优模型配置：40轮）
+  learning_rate: 3e-5           # 学习率（多人对话增强场景，保持较低学习率以稳定训练）
+  weight_decay: 1.5e-4          # 权重衰减（适当增加正则化，防止过拟合）
+  
+  # 优化器配置
+  optimizer: adamw              # 优化器类型（adamw对大batch_size更稳定）
+  scheduler: cosine             # 学习率调度器 (cosine/step/none)
+  scheduler_step_size: 6        # 学习率衰减步数
+  scheduler_gamma: 0.1          # 学习率衰减因子
+  warmup_epochs: 4              # 学习率预热轮数（平衡数据集适当预热）
+  
+  # 梯度累积配置
+  gradient_accumulation_steps: 2  # 梯度累积步数（2步累积，有效batch_size = 16*2*2 = 64，保持训练效果）
+  
+  # 损失函数配置
+  loss_function: contrastive    # 损失函数类型 (contrastive/triplet/softmax) - 使用对比损失以支持拒绝非目标员工
+  margin: 0.2                   # 对比损失和三元组损失的margin参数
+  
+  # 目标员工配置
+  target_employee_prefix: "emp_"  # 目标员工ID前缀，用于过滤模板（只保存目标员工模板，VCTK等负样本不保存）
+  
+  # 数据增强配置（小数据集需要更强的数据增强）
+  augment: true                 # 是否启用数据增强（小数据集必须启用）
+  noise_level: 0.1              # 噪声增强的噪声水平（建议2：保持0.1，不要超过0.12）
+  speed_range: [0.85, 1.15]     # 语速变化范围（扩大范围增加多样性）
+  volume_range: [0.7, 1.3]     # 音量缩放范围（扩大范围增加多样性）
+  time_shift_prob: 0.5          # 时间偏移增强概率（提高多样性）
+  specaugment: true            # 是否启用SpecAugment频谱增强（小数据集必须启用）
+  specaugment_time_mask: 30     # SpecAugment时间掩码长度（适当增加）
+  specaugment_freq_mask: 15     # SpecAugment频率掩码长度（适当增加）
+  reverb_prob: 0.3              # 混响效果增强概率（建议2：保持0.3，不要超过0.35）
+  reverb_room_scale: 0.4        # 混响房间大小参数（增加变化）
+  
+  # 多人对话混合增强（回退到最优模型配置：20251214_140340）
+  multi_speaker_mix_prob: 0.25    # 多人对话混合概率（回退到25%，时间交替混合方式）
+  multi_speaker_mix_ratio: [0.8, 0.9]  # 目标员工在混合音频中的占比范围（回退到80%-90%，平衡特征保持和混合真实性）
+  
+  # 数据加载配置（双GPU优化，提高GPU利用率）
+  num_workers: 12               # 数据加载工作进程数（从8增加到12，提高数据加载速度，减少GPU等待时间）
+  pin_memory: true              # 启用固定内存，加速CPU到GPU的数据传输
+  
+  # 训练优化配置
+  use_parallel: true           # 启用多GPU并行训练（2张Tesla V100，自动使用DataParallel）
+  mixed_precision: true        # 启用混合精度训练（FP16），节省约50%显存
+  realtime_monitoring: true     # 是否启用实时监控（每个batch显示进度）
+  monitoring_interval: 10       # 实时监控更新间隔（每N个batch显示一次，设为1则每个batch都显示）
+  
+  # 早停配置（回退到最优模型配置）
+  early_stopping: true          # 是否启用早停
+  early_stopping_patience: 15  # 早停耐心值（回退到15）
+  early_stopping_delta: 0.001 # 早停阈值变化（回退到0.001）
+
+validation:
+  accuracy_target: 94           # 目标准确率(%)
+  latency_target: 10ms          # 目标延迟(ms)
+  enabled: true                 # 是否启用验证
+  eval_interval: 1              # 验证间隔（每N个epoch验证一次）
+  save_best_model: true         # 是否保存最佳模型
+  compute_metrics: true        # 是否计算详细指标（F1、Precision、Recall，仅softmax损失函数）
+  visualize_embeddings: true    # 生成嵌入向量可视化（混淆矩阵和TSNE）
+  multi_metric_early_stop: true  # 使用多指标综合早停（val_acc+F1 综合）
+
+# 输出配置
+output:
+  log_level: info               # 日志级别

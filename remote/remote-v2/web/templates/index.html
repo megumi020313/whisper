@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>声纹卫士 - VoiceGuard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-100">
+    <!-- 顶部导航栏 -->
+    <header class="bg-blue-900 text-white px-8 py-4 flex justify-between items-center shadow-md">
+        <div class="flex items-center space-x-3">
+            <i class="fa-solid fa-fingerprint text-2xl"></i>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">声纹卫士 <span class="text-xs font-normal opacity-60">VoiceGuard</span></h1>
+            </div>
+        </div>
+        <nav class="flex space-x-12">
+            <a href="#" onclick="showMainTab('verify')" class="opacity-70 hover:opacity-100 pb-1 nav-active transition" id="main-tab-verify">声纹识别</a>
+            <a href="#" onclick="showMainTab('register')" class="opacity-70 hover:opacity-100 pb-1 transition" id="main-tab-register">声纹注册</a>
+            <a href="#" onclick="showMainTab('manage')" class="opacity-70 hover:opacity-100 pb-1 transition" id="main-tab-manage">注册库管理</a>
+        </nav>
+        <div class="flex items-center space-x-3">
+            <button id="config-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold transition flex items-center space-x-2">
+                <i class="fa-solid fa-cog"></i>
+                <span>参数配置</span>
+            </button>
+            <div id="system-version" class="text-xs font-mono opacity-50">v14.3 (Dual Model)</div>
+        </div>
+    </header>
+
+    <!-- 参数配置弹窗 -->
+    <div id="config-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 max-w-4xl max-h-[90vh] flex flex-col">
+            <!-- 弹窗头部 -->
+            <div class="bg-blue-900 text-white px-6 py-4 rounded-t-xl flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-cog text-xl"></i>
+                    <h2 class="text-lg font-bold">模型参数配置</h2>
+                </div>
+                <button id="config-close-btn" class="text-white hover:text-gray-300 transition">
+                    <i class="fa-solid fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- 弹窗内容 -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm font-bold text-gray-700">配置文件路径：</label>
+                        <span class="text-xs text-gray-500 font-mono">config/model_config.yaml</span>
+                    </div>
+                    <textarea id="config-content" class="w-full h-96 font-mono text-xs border-2 border-gray-300 rounded-lg p-4 focus:border-blue-600 outline-none" spellcheck="false"></textarea>
+                </div>
+                
+                <div id="config-error" class="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-4" style="display: none;">
+                    <p class="text-sm text-red-700"></p>
+                </div>
+                
+                <div id="config-success" class="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-4" style="display: none;">
+                    <p class="text-sm text-green-700"></p>
+                </div>
+                
+                <!-- 重启进度显示 -->
+                <div id="config-restart-progress" class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mb-4" style="display: none;">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <i class="fa-solid fa-spinner fa-spin text-blue-600"></i>
+                        <p class="text-sm font-bold text-blue-700">正在重启服务...</p>
+                    </div>
+                    <p id="config-restart-status" class="text-xs text-blue-600 ml-7"></p>
+                    <div class="w-full bg-blue-200 rounded-full h-2 mt-3">
+                        <div id="config-restart-bar" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 弹窗底部按钮 -->
+            <div class="border-t border-gray-200 px-6 py-4 flex justify-end items-center">
+                <button id="config-restart-btn" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-bold transition flex items-center space-x-2">
+                    <i class="fa-solid fa-power-off"></i>
+                    <span>保存并重启服务</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <main class="container mx-auto p-6">
+        
+        <!-- 声纹识别页面 -->
+        <section id="sec-verify" class="space-y-6">
+            <!-- 操作按钮区 -->
+            <div class="bg-white p-4 rounded-xl shadow flex justify-between items-center">
+                <div class="flex space-x-3 items-center">
+                    <!-- 录音/上传切换按钮 -->
+                    <button id="tab-record" class="tab-btn bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 flex items-center shadow-lg transition">
+                        <i class="fa-solid fa-microphone mr-2"></i>浏览器录音
+                    </button>
+                    <button id="tab-upload" class="tab-btn bg-white text-gray-700 px-6 py-2 rounded-lg font-bold hover:bg-gray-50 border border-gray-300 flex items-center transition">
+                        <i class="fa-solid fa-file-import mr-2 text-blue-600"></i>导入音频文件
+                    </button>
+                    
+                    <!-- 双模型识别按钮（移至顶部） -->
+                    <button id="recognize-btn-top" class="btn bg-green-600 text-white px-8 py-2 rounded-lg font-bold hover:bg-green-700 flex items-center shadow-lg transition" disabled>
+                        <i class="fa-solid fa-fingerprint mr-2 text-xl"></i>双模型识别
+                    </button>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="text-right">
+                        <p class="text-[10px] text-gray-400 uppercase">Comparison Mode</p>
+                        <p class="text-xs font-bold text-gray-700">远端大模型 vs 离线小模型</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-12 gap-6">
+                <!-- 左侧：录音/上传操作区 (Col 4) -->
+                <div class="col-span-4 space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow min-h-[500px]">
+                        <!-- 录音选项卡内容 -->
+                        <div id="record-tab-content" class="tab-content active">
+                            <h2 class="text-sm font-bold mb-4 text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-microphone mr-2"></i>浏览器录音</h2>
+                            <div class="space-y-4">
+                                <div class="flex space-x-3">
+                                    <button id="start-record" class="btn bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 flex items-center shadow transition w-full justify-center">
+                                        <i class="fa-solid fa-circle mr-2"></i>开始
+                                    </button>
+                                    <button id="stop-record" class="btn bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-700 flex items-center shadow transition w-full justify-center" disabled>
+                                        <i class="fa-solid fa-stop mr-2"></i>停止
+                                    </button>
+                                </div>
+                                
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <div id="record-status" class="status ready inline-block px-3 py-1 rounded-full text-sm font-bold mb-2">就绪</div>
+                                    <div class="text-lg font-mono">
+                                        <span class="text-gray-600">录音时长：</span>
+                                        <span id="record-time" class="time text-blue-600 font-bold">00:00</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">⚠️ 建议录制 <strong class="text-orange-600">15-30 秒</strong></p>
+                                </div>
+                                
+                                <!-- 录音预览区域（独立） -->
+                                <div id="record-audio-preview" class="bg-gray-50 p-4 rounded-lg" style="display: none;">
+                                    <h3 class="text-xs font-bold mb-2 text-blue-600 uppercase">🎵 录音预览</h3>
+                                    <audio id="record-audio-player" controls class="w-full mb-2 h-8"></audio>
+                                    <p id="record-audio-duration" class="text-xs text-gray-500"></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 上传选项卡内容 -->
+                        <div id="upload-tab-content" class="tab-content hidden">
+                            <h2 class="text-sm font-bold mb-4 text-gray-500 uppercase tracking-widest"><i class="fa-solid fa-file-import mr-2"></i>导入音频文件</h2>
+                            <input type="file" id="audio-file-input" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm,.flac,.aac" style="display: none;">
+                            
+                            <div id="upload-drop-zone" class="border-2 border-dashed border-gray-300 rounded-xl p-6 hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer mb-4">
+                                <!-- 未上传状态 -->
+                                <div id="upload-empty-state" class="text-center">
+                                    <div class="text-3xl mb-2">📁</div>
+                                    <p class="text-sm font-bold text-gray-700 mb-2">点击或拖拽文件</p>
+                                    <button id="select-upload-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 text-sm">
+                                        选择文件
+                                    </button>
+                                </div>
+                                
+                                <!-- 已上传状态 -->
+                                <div id="upload-file-state" class="space-y-3" style="display: none;">
+                                    <!-- 文件信息 -->
+                                    <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+                                        <p class="text-sm mb-1">📄 <span id="upload-file-name" class="font-bold text-blue-600"></span></p>
+                                        <p class="text-xs text-gray-500"><span id="upload-file-size"></span></p>
+                                    </div>
+                                    
+                                    <!-- 音频预览 -->
+                                    <div class="bg-gray-50 p-3 rounded">
+                                        <h4 class="text-xs font-bold mb-2 text-blue-600 uppercase">🎵 预览</h4>
+                                        <audio id="upload-audio-player" controls class="w-full mb-2 h-8"></audio>
+                                        <p id="upload-audio-duration" class="text-xs text-gray-500"></p>
+                                    </div>
+                                    
+                                    <!-- 操作按钮 -->
+                                    <div class="flex space-x-2">
+                                        <button id="reupload-file-btn" class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 font-bold transition">
+                                            <i class="fa-solid fa-upload mr-1"></i>重新上传音频
+                                        </button>
+                                        <button id="clear-upload-file-btn" class="bg-gray-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-600 font-bold transition">
+                                            <i class="fa-solid fa-trash mr-1"></i>清除
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 测试音频选择 -->
+                            <div class="border-t pt-4 mt-4">
+                                <h3 id="toggle-test-audio-header" class="text-xs font-bold mb-3 text-blue-600 uppercase tracking-widest cursor-pointer hover:text-blue-700 transition flex items-center">
+                                    <i class="fa-solid fa-flask mr-2"></i>
+                                    <span>测试音频</span>
+                                    <i id="test-audio-toggle-icon" class="fa-solid fa-chevron-down ml-auto text-gray-400"></i>
+                                </h3>
+                                <div id="test-audio-container" class="space-y-2" style="display: none;">
+                                    <p class="text-xs text-gray-500 mb-2 px-2 py-1 bg-blue-50 rounded">
+                                        <i class="fa-solid fa-info-circle mr-1"></i>
+                                        单击音频可进行播放，拖拽到上方"导入音频文件框"可进行声纹识别
+                                    </p>
+                                    <div id="test-audio-list" class="space-y-2 mb-3">
+                                        <!-- 动态生成测试音频列表 -->
+                                    </div>
+                                    <!-- 测试音频播放控制 -->
+                                    <div id="test-audio-player-container" class="bg-gray-50 p-3 rounded" style="display: none;">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span id="test-audio-player-name" class="text-xs font-medium text-gray-700"></span>
+                                            <button id="test-audio-close-btn" class="text-gray-400 hover:text-gray-600 text-xs">
+                                                <i class="fa-solid fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <audio id="test-audio-player" controls class="w-full h-8"></audio>
+                                    </div>
+                                    <div class="flex space-x-2 mt-2">
+                                        <input type="file" id="test-audio-upload-input" accept=".wav" style="display: none;">
+                                        <button id="upload-test-audio-btn" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-bold transition">
+                                            <i class="fa-solid fa-upload mr-1"></i>上传
+                                        </button>
+                                        <button id="refresh-test-audio-btn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-bold transition">
+                                            <i class="fa-solid fa-refresh mr-1"></i>刷新
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 中间：V2 结果 (Col 4) -->
+                <div class="col-span-4">
+                    <div id="current-speaker-card" class="bg-white p-6 rounded-xl shadow border-t-8 border-blue-600 min-h-[500px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <p class="text-xs font-bold text-blue-600 uppercase tracking-widest">远端大模型</p>
+                            </div>
+                            <button id="recognize-v2-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded-lg font-bold hover:bg-blue-700 flex items-center text-xs shadow transition" disabled>
+                                <i class="fa-solid fa-play mr-1"></i>识别
+                            </button>
+                        </div>
+                        
+                        <!-- V2识别进度条 -->
+                        <div id="recognize-v2-progress-bar" class="mb-4" style="display: none;">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs text-gray-600">识别进度</span>
+                                <span id="recognize-v2-progress-text" class="text-xs font-bold text-blue-600">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                <div id="recognize-v2-progress-fill" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <p id="recognize-v2-progress-stage" class="text-xs text-gray-500 mt-1"></p>
+                        </div>
+                        
+                        <div id="speakers-list-container" class="space-y-4">
+                            <!-- 动态生成说话人列表 -->
+                            <div class="text-center py-12 text-gray-400">
+                                <i class="fa-solid fa-user-slash text-5xl mb-4"></i>
+                                <p class="text-lg">未识别</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧：SMP 结果 (Col 4) -->
+                <div class="col-span-4">
+                    <div id="smp-speaker-card" class="bg-white p-6 rounded-xl shadow border-t-8 border-orange-500 min-h-[500px]">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <p class="text-xs font-bold text-orange-600 uppercase tracking-widest">离线小模型</p>
+                            </div>
+                            <button id="recognize-smp-btn" class="bg-orange-600 text-white px-4 py-1.5 rounded-lg font-bold hover:bg-orange-700 flex items-center text-xs shadow transition" disabled>
+                                <i class="fa-solid fa-play mr-1"></i>识别
+                            </button>
+                        </div>
+                        
+                        <!-- SMP识别进度条 -->
+                        <div id="recognize-smp-progress-bar" class="mb-4" style="display: none;">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs text-gray-600">识别进度</span>
+                                <span id="recognize-smp-progress-text" class="text-xs font-bold text-orange-600">0%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                <div id="recognize-smp-progress-fill" class="bg-orange-600 h-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <p id="recognize-smp-progress-stage" class="text-xs text-gray-500 mt-1"></p>
+                        </div>
+                        
+                        <div id="smp-speakers-list-container" class="space-y-4">
+                            <!-- 动态生成说话人列表 -->
+                            <div class="text-center py-12 text-gray-400">
+                                <i class="fa-solid fa-user-slash text-5xl mb-4"></i>
+                                <p class="text-lg">未识别</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部：轨迹和分段并行展示 (Col 6 + Col 6) -->
+                <div id="timeline-container" class="col-span-12 grid grid-cols-12 gap-6">
+                    <!-- 左侧：远端大模型 时间轴和分段 -->
+                    <div id="v2-timeline-wrapper" class="col-span-6 space-y-6">
+                        <!-- Remote-V2 识别轨迹时间轴 -->
+                        <div id="timeline-result" class="bg-white p-6 rounded-xl shadow border-t-4 border-blue-600" style="display: none;">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center space-x-4">
+                                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">远端大模型 时间轴</h2>
+                                    <span id="processing-time" class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-mono" style="display: none;">
+                                        识别耗时：<span id="processing-time-value">0.00</span>s
+                                    </span>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <button id="timeline-play-btn" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center space-x-2 text-sm">
+                                        <i class="fa-solid fa-play"></i>
+                                        <span>播放</span>
+                                    </button>
+                                    <button id="timeline-pause-btn" class="bg-gray-600 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 flex items-center space-x-2 text-sm" style="display: none;">
+                                        <i class="fa-solid fa-pause"></i>
+                                        <span>暂停</span>
+                                    </button>
+                                    <span id="timeline-current-time" class="text-xs font-mono text-gray-600">0:00 / 0:00</span>
+                                </div>
+                            </div>
+                            <div id="timeline-content">
+                                <!-- 动态生成时间轴 -->
+                            </div>
+                            <audio id="timeline-audio" style="display: none;"></audio>
+                        </div>
+
+                        <!-- 远端大模型 识别流分段结果 -->
+                        <div id="result-segments" class="bg-white p-6 rounded-xl shadow border-t-4 border-blue-600 min-h-[200px]" style="display: none;">
+                            <h2 class="text-xs font-bold mb-4 text-gray-400 uppercase tracking-widest">远端大模型 分段结果</h2>
+                            <div id="segments-list" class="space-y-3">
+                                <!-- 动态生成分段结果 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右侧：离线小模型 时间轴和分段 -->
+                    <div id="smp-timeline-wrapper" class="col-span-6 space-y-6">
+                        <!-- SMP 识别轨迹时间轴 -->
+                        <div id="smp-timeline-result" class="bg-white p-6 rounded-xl shadow border-t-4 border-orange-500" style="display: none;">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center space-x-4">
+                                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest">离线小模型 时间轴</h2>
+                                    <span id="smp-processing-time" class="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-mono" style="display: none;">
+                                        识别耗时：<span id="smp-processing-time-value">0.00</span>s
+                                    </span>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <button id="smp-timeline-play-btn" class="bg-orange-600 text-white px-3 py-1.5 rounded-lg hover:bg-orange-700 flex items-center space-x-2 text-sm">
+                                        <i class="fa-solid fa-play"></i>
+                                        <span>播放</span>
+                                    </button>
+                                    <button id="smp-timeline-pause-btn" class="bg-gray-600 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 flex items-center space-x-2 text-sm" style="display: none;">
+                                        <i class="fa-solid fa-pause"></i>
+                                        <span>暂停</span>
+                                    </button>
+                                    <span id="smp-timeline-current-time" class="text-xs font-mono text-gray-600">0:00 / 0:00</span>
+                                </div>
+                            </div>
+                            <div id="smp-timeline-content">
+                                <!-- 动态生成时间轴 -->
+                            </div>
+                            <audio id="smp-timeline-audio" style="display: none;"></audio>
+                        </div>
+
+                        <!-- 离线小模型 识别流分段结果 -->
+                        <div id="smp-result-segments" class="bg-white p-6 rounded-xl shadow border-t-4 border-orange-500 min-h-[200px]" style="display: none;">
+                            <h2 class="text-xs font-bold mb-4 text-gray-400 uppercase tracking-widest">离线小模型 分段结果</h2>
+                            <div id="smp-segments-list" class="space-y-3">
+                                <!-- 动态生成分段结果 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 声纹注册页面 (未修改) -->
+        <section id="sec-register" class="hidden flex justify-center py-12">
+            <div class="w-full max-w-3xl bg-white p-8 rounded-2xl shadow border-t-8 border-blue-900">
+                <h2 class="text-2xl font-black text-gray-800 mb-8 flex items-center">
+                    <i class="fa-solid fa-user-plus mr-4 text-blue-900"></i>人员声纹注册
+                </h2>
+                
+                <!-- 初始选择界面 -->
+                <div id="register-init" class="space-y-8">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-500 uppercase mb-3">人员姓名</label>
+                        <input type="text" id="register-speaker-id" class="w-full bg-gray-50 border-2 border-gray-100 p-4 rounded-xl focus:border-blue-600 focus:bg-white outline-none transition text-lg font-bold" placeholder="输入识别姓名（必填）">
+                        <p id="register-name-error" class="text-red-600 text-sm mt-2" style="display: none;"></p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="start-record-register-btn" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 p-8 rounded-xl hover:bg-blue-50 hover:border-blue-400 transition group">
+                            <i class="fa-solid fa-microphone text-3xl text-gray-300 group-hover:text-blue-600 mb-3"></i>
+                            <span class="text-sm font-bold text-gray-500 group-hover:text-blue-600">实时录音注册</span>
+                        </button>
+                        <button id="start-upload-register-btn" class="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 p-8 rounded-xl hover:bg-blue-50 hover:border-blue-400 transition group">
+                            <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-300 group-hover:text-blue-600 mb-3"></i>
+                            <span class="text-sm font-bold text-gray-500 group-hover:text-blue-600">上传音频文件</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 录音注册流程 -->
+                <div id="register-recording" class="space-y-6" style="display: none;">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <label class="text-sm text-blue-900 font-bold">注册用户：</label>
+                            <input type="text" id="register-user-name-edit" class="bg-white border-2 border-blue-200 px-3 py-1 rounded-lg focus:border-blue-600 outline-none text-sm font-bold">
+                        </div>
+                        <p class="text-sm text-gray-600">为了获得最佳识别效果，请完成3段录音（每段5-8秒）</p>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">第 <span id="current-step">1</span> 步（共3步）</h3>
+                            <div class="flex space-x-2">
+                                <div id="step-1" class="w-3 h-3 rounded-full bg-blue-600"></div>
+                                <div id="step-2" class="w-3 h-3 rounded-full bg-gray-300"></div>
+                                <div id="step-3" class="w-3 h-3 rounded-full bg-gray-300"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-4 rounded-lg mb-4">
+                            <p class="text-gray-600 mb-2">请清晰地朗读下面的句子：</p>
+                            <p id="register-sentence" class="text-lg font-bold text-gray-800"></p>
+                        </div>
+                        
+                        <div class="flex space-x-3 mb-4">
+                            <button id="register-record-btn" class="btn bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 flex items-center shadow transition">
+                                <i class="fa-solid fa-circle mr-2"></i>开始录音
+                    </button>
+                            <button id="register-stop-btn" class="btn bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 flex items-center shadow transition" disabled>
+                                <i class="fa-solid fa-stop mr-2"></i>停止录音
+                    </button>
+                        </div>
+                        
+                        <div id="register-feedback" class="p-4 rounded-lg" style="display: none;"></div>
+                    </div>
+                    
+                    <button id="cancel-register-btn" class="w-full bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 transition">
+                        <i class="fa-solid fa-plus mr-2"></i>继续注册
+                    </button>
+                </div>
+
+                <!-- 上传注册流程 -->
+                <div id="register-upload" class="space-y-6" style="display: none;">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <label class="text-sm text-blue-900 font-bold">注册用户：</label>
+                            <input type="text" id="upload-user-name-edit" class="bg-white border-2 border-blue-200 px-3 py-1 rounded-lg focus:border-blue-600 outline-none text-sm font-bold">
+                        </div>
+                        <p class="text-sm text-gray-600">请上传清晰的语音文件（建议15-30秒）</p>
+                    </div>
+                    
+                    
+                    <input type="file" id="register-audio-input" accept="audio/*" style="display: none;">
+                    
+                    <div id="upload-file-info" style="display: none;">
+                        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-4">
+                            <p class="text-sm mb-2">📄 文件名：<span id="upload-file-name" class="font-bold"></span></p>
+                            <p class="text-sm mb-3">📊 文件大小：<span id="upload-file-size" class="font-bold"></span></p>
+                        </div>
+                        
+                        <audio id="upload-audio-player" controls class="w-full mb-4"></audio>
+                        
+                        <div id="upload-feedback" class="p-4 rounded-lg mb-4" style="display: none;"></div>
+                        
+                        <div class="space-y-3">
+                            <div class="flex space-x-3">
+                                <button id="upload-save-btn" class="flex-1 bg-blue-900 text-white p-4 rounded-lg font-bold hover:bg-blue-800 transition" disabled>
+                                    保存至特征库
+                                </button>
+                                <button id="upload-reselect-btn" class="bg-gray-500 text-white px-6 py-4 rounded-lg font-bold hover:bg-gray-600 transition">
+                                    重新选择
+                                </button>
+                            </div>
+                            
+                            <!-- 注册进度条 -->
+                            <div id="register-progress-bar" class="mt-3" style="display: none;">
+                                <!-- 详细阶段进度 -->
+                                <div id="register-progress" class="bg-white border-2 border-blue-200 rounded-lg p-4 mb-3">
+                                    <h3 class="text-sm font-bold text-gray-700 mb-3">注册进度</h3>
+                                    <div class="space-y-2">
+                                        <div id="stage-preprocess" class="flex items-center text-sm">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 mr-2" style="display: none;"></i>
+                                            <i class="fa-solid fa-circle text-gray-300 mr-2"></i>
+                                            <span class="text-gray-600">【3.1】音频预处理与验证</span>
+                                        </div>
+                                        <div id="stage-vad-quality" class="flex items-center text-sm">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 mr-2" style="display: none;"></i>
+                                            <i class="fa-solid fa-circle text-gray-300 mr-2"></i>
+                                            <span class="text-gray-600">【3.2】VAD切分与SNR质量检测</span>
+                                        </div>
+                                        <div id="stage-extract" class="flex items-center text-sm">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 mr-2" style="display: none;"></i>
+                                            <i class="fa-solid fa-circle text-gray-300 mr-2"></i>
+                                            <span class="text-gray-600">【3.3】声纹特征提取（远端大模型）</span>
+                                        </div>
+                                        <div id="stage-quality-control" class="flex items-center text-sm">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 mr-2" style="display: none;"></i>
+                                            <i class="fa-solid fa-circle text-gray-300 mr-2"></i>
+                                            <span class="text-gray-600">【3.4】阶梯式质量控制</span>
+                                        </div>
+                                        <div id="stage-aggregate" class="flex items-center text-sm">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 mr-2" style="display: none;"></i>
+                                            <i class="fa-solid fa-circle text-gray-300 mr-2"></i>
+                                            <span class="text-gray-600">【3.5】加权平均计算（质心）</span>
+                                        </div>
+                                        <div id="stage-distinctiveness" class="flex items-center text-sm">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 mr-2" style="display: none;"></i>
+                                            <i class="fa-solid fa-circle text-gray-300 mr-2"></i>
+                                            <span class="text-gray-600">【3.5】AS-Norm显著性检测</span>
+                                        </div>
+                                        <div id="stage-tnorm" class="flex items-center text-sm">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 mr-2" style="display: none;"></i>
+                                            <i class="fa-solid fa-circle text-gray-300 mr-2"></i>
+                                            <span class="text-gray-600">【3.6】S-Norm参数预计算（T-Norm）</span>
+                                        </div>
+                                        <div id="stage-save" class="flex items-center text-sm">
+                                            <i class="fa-solid fa-circle-notch fa-spin text-blue-600 mr-2" style="display: none;"></i>
+                                            <i class="fa-solid fa-circle text-gray-300 mr-2"></i>
+                                            <span class="text-gray-600">【3.6】向量存储（含metadata）</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 百分比进度条 -->
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs text-gray-600">总体进度</span>
+                                    <span id="register-progress-text" class="text-xs font-bold text-blue-600">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                    <div id="register-progress-fill" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                                <p id="register-progress-stage" class="text-xs text-gray-500 mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="cancel-upload-btn" class="w-full bg-green-600 text-white p-3 rounded-lg font-bold hover:bg-green-700 transition">
+                        <i class="fa-solid fa-plus mr-2"></i>继续注册
+                    </button>
+                </div>
+                </div>
+            </section>
+
+        <!-- 注册库管理页面 -->
+        <section id="sec-manage" class="hidden">
+            <div id="speaker-list" class="bg-white rounded-xl shadow overflow-hidden">
+                <div class="p-6 border-b">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-gray-700">特征库管理 <span id="speaker-count" class="ml-2 px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full">0 条目</span></h2>
+                        <button id="refresh-speakers-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 text-sm">
+                            <i class="fa-solid fa-refresh"></i>
+                            <span>刷新</span>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="search-speaker-input" placeholder="搜索用户名..." 
+                               class="w-full bg-gray-50 border-2 border-gray-200 px-4 py-2 pr-10 rounded-lg focus:border-blue-600 outline-none text-sm">
+                        <i class="fa-solid fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+                <div id="speaker-list-content">
+                    <!-- 动态生成用户列表 -->
+                </div>
+            </div>
+            </section>
+
+        </main>
+
+        <!-- 页脚 -->
+    <footer class="bg-gray-100 mt-8 py-6 text-center text-gray-600 text-sm border-t">
+        <p class="mb-2">© 2024 声纹卫士 VoiceGuard | HTML5 MediaRecorder + Flask</p>
+        <p class="text-xs">
+                <span>录音格式：16kHz/16bit/单声道</span>
+            <span class="mx-2">|</span>
+                <span>支持浏览器：Chrome、Firefox、Edge</span>
+            </p>
+        </footer>
+
+    <!-- 加载JavaScript -->
+    <script src="/static/js/recorder.js?v=20251223"></script>
+    <script src="/static/js/api.js?v=20251223"></script>
+    <script src="/static/js/ui.js?v=20251223"></script>
+    <script src="/static/js/main.js?v=20251223"></script>
+    <script>
+        // 从后端传递的 API 端口配置
+        window.API_PORT = {{ api_port }};
+        console.log('🔧 API端口配置:', window.API_PORT);
+        
+        // 主选项卡切换
+        function showMainTab(tabName) {
+            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('nav-active'));
+            document.getElementById('sec-' + tabName).classList.remove('hidden');
+            document.getElementById('main-tab-' + tabName).classList.add('nav-active');
+            
+            // 切换到管理页面时加载用户列表
+            if (tabName === 'manage' && window.app) {
+                window.app.handleListSpeakers();
+            }
+        }
+    </script>
+</body>
+</html>

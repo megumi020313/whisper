@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>录音功能诊断工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4a90e2;
+            padding-bottom: 10px;
+        }
+        .test-item {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+        }
+        .test-item.pass {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .test-item.fail {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .test-item.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        .status {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .status.pass { color: #28a745; }
+        .status.fail { color: #dc3545; }
+        .status.warning { color: #ffc107; }
+        .info {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #3a7bc8;
+        }
+        .solution {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .solution h3 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 录音功能诊断工具</h1>
+        
+        <div id="browser-info" class="test-item">
+            <div class="status">检测中...</div>
+            <div class="info">正在检测浏览器信息...</div>
+        </div>
+        
+        <div id="protocol-check" class="test-item">
+            <div class="status">检测中...</div>
+            <div class="info">正在检查访问协议...</div>
+        </div>
+        
+        <div id="api-support" class="test-item">
+            <div class="status">检测中...</div>
+            <div class="info">正在检查API支持...</div>
+        </div>
+        
+        <div id="permission-test" class="test-item">
+            <div class="status">等待测试</div>
+            <div class="info">点击下方按钮测试麦克风权限</div>
+        </div>
+        
+        <button onclick="testMicrophonePermission()">测试麦克风权限</button>
+        <button onclick="location.href='/'">返回主页</button>
+        
+        <div id="solutions" style="display: none;" class="solution">
+            <h3>💡 解决方案</h3>
+            <div id="solution-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 检测浏览器信息
+        function checkBrowser() {
+            const browserInfo = document.getElementById('browser-info');
+            const ua = navigator.userAgent;
+            let browserName = '未知浏览器';
+            let version = '';
+            
+            if (ua.indexOf('Edg/') > -1) {
+                browserName = 'Microsoft Edge (Chromium)';
+                version = ua.match(/Edg\/([\d.]+)/)?.[1] || '';
+            } else if (ua.indexOf('Edge/') > -1) {
+                browserName = 'Microsoft Edge (Legacy)';
+                version = ua.match(/Edge\/([\d.]+)/)?.[1] || '';
+            } else if (ua.indexOf('Chrome') > -1) {
+                browserName = 'Google Chrome';
+                version = ua.match(/Chrome\/([\d.]+)/)?.[1] || '';
+            } else if (ua.indexOf('Firefox') > -1) {
+                browserName = 'Mozilla Firefox';
+                version = ua.match(/Firefox\/([\d.]+)/)?.[1] || '';
+            } else if (ua.indexOf('Safari') > -1) {
+                browserName = 'Apple Safari';
+                version = ua.match(/Version\/([\d.]+)/)?.[1] || '';
+            }
+            
+            browserInfo.className = 'test-item pass';
+            browserInfo.innerHTML = `
+                <div class="status pass">✅ 浏览器信息</div>
+                <div class="info">
+                    <strong>浏览器：</strong>${browserName}<br>
+                    <strong>版本：</strong>${version}<br>
+                    <strong>User Agent：</strong><code style="font-size: 0.8em;">${ua}</code>
+                </div>
+            `;
+        }
+        
+        // 2. 检查访问协议
+        function checkProtocol() {
+            const protocolCheck = document.getElementById('protocol-check');
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            
+            const isSecure = protocol === 'https:' || hostname === 'localhost' || hostname === '127.0.0.1';
+            
+            if (isSecure) {
+                protocolCheck.className = 'test-item pass';
+                protocolCheck.innerHTML = `
+                    <div class="status pass">✅ 访问协议安全</div>
+                    <div class="info">
+                        <strong>协议：</strong>${protocol}<br>
+                        <strong>主机：</strong>${hostname}<br>
+                        这是一个安全的上下文，可以使用录音功能。
+                    </div>
+                `;
+            } else {
+                protocolCheck.className = 'test-item fail';
+                protocolCheck.innerHTML = `
+                    <div class="status fail">❌ 访问协议不安全</div>
+                    <div class="info">
+                        <strong>协议：</strong>${protocol}<br>
+                        <strong>主机：</strong>${hostname}<br>
+                        <strong>问题：</strong>浏览器要求在HTTPS或localhost下才能使用麦克风！
+                    </div>
+                `;
+                showSolution('protocol');
+            }
+        }
+        
+        // 3. 检查API支持
+        function checkAPISupport() {
+            const apiSupport = document.getElementById('api-support');
+            const checks = {
+                'navigator.mediaDevices': !!navigator.mediaDevices,
+                'getUserMedia': !!(navigator.mediaDevices?.getUserMedia),
+                'MediaRecorder': !!window.MediaRecorder
+            };
+            
+            const allSupported = Object.values(checks).every(v => v);
+            
+            let detailsHTML = '<strong>API支持情况：</strong><br>';
+            for (const [api, supported] of Object.entries(checks)) {
+                detailsHTML += `${supported ? '✅' : '❌'} ${api}<br>`;
+            }
+            
+            if (allSupported) {
+                apiSupport.className = 'test-item pass';
+                apiSupport.innerHTML = `
+                    <div class="status pass">✅ API完全支持</div>
+                    <div class="info">${detailsHTML}</div>
+                `;
+            } else {
+                apiSupport.className = 'test-item fail';
+                apiSupport.innerHTML = `
+                    <div class="status fail">❌ API不完全支持</div>
+                    <div class="info">${detailsHTML}</div>
+                `;
+                showSolution('api');
+            }
+        }
+        
+        // 4. 测试麦克风权限
+        async function testMicrophonePermission() {
+            const permissionTest = document.getElementById('permission-test');
+            
+            permissionTest.className = 'test-item';
+            permissionTest.innerHTML = `
+                <div class="status">⏳ 测试中...</div>
+                <div class="info">正在请求麦克风权限，请允许访问...</div>
+            `;
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // 成功获取麦克风
+                permissionTest.className = 'test-item pass';
+                permissionTest.innerHTML = `
+                    <div class="status pass">✅ 麦克风权限正常</div>
+                    <div class="info">
+                        成功获取麦克风访问权限！<br>
+                        <strong>音频轨道：</strong>${stream.getAudioTracks().length}个<br>
+                        <strong>设备标签：</strong>${stream.getAudioTracks()[0]?.label || '(未知)'}<br>
+                        录音功能应该可以正常工作。
+                    </div>
+                `;
+                
+                // 停止音频流
+                stream.getTracks().forEach(track => track.stop());
+                
+                // 显示成功提示
+                setTimeout(() => {
+                    if (confirm('麦克风测试成功！是否返回主页开始使用？')) {
+                        location.href = '/';
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                permissionTest.className = 'test-item fail';
+                permissionTest.innerHTML = `
+                    <div class="status fail">❌ 麦克风权限失败</div>
+                    <div class="info">
+                        <strong>错误：</strong>${error.name}<br>
+                        <strong>消息：</strong>${error.message}<br>
+                        <strong>可能原因：</strong>
+                        ${error.name === 'NotAllowedError' ? '用户拒绝了麦克风权限' : 
+                          error.name === 'NotFoundError' ? '未找到麦克风设备' :
+                          error.name === 'NotReadableError' ? '麦克风被其他应用占用' :
+                          '未知错误'}
+                    </div>
+                `;
+                showSolution('permission', error.name);
+            }
+        }
+        
+        // 显示解决方案
+        function showSolution(type, errorName = '') {
+            const solutions = document.getElementById('solutions');
+            const solutionContent = document.getElementById('solution-content');
+            
+            let content = '';
+            
+            if (type === 'protocol') {
+                content = `
+                    <p><strong>⚠️ 问题：</strong>您正在使用 HTTP 协议访问（${window.location.protocol}//${window.location.host}），浏览器出于安全考虑禁止使用麦克风！</p>
+                    
+                    <p><strong>📌 解决方案：</strong></p>
+                    
+                    <h4>方案1：本地访问（推荐用于本地开发）</h4>
+                    <ol>
+                        <li>使用 localhost 访问：<code>http://localhost:51003</code></li>
+                        <li>或使用 127.0.0.1：<code>http://127.0.0.1:51003</code></li>
+                    </ol>
+                    
+                    <h4>方案2：配置 HTTPS（推荐用于远程访问）</h4>
+                    <ol>
+                        <li>使用 Nginx + Let's Encrypt 配置免费 HTTPS 证书</li>
+                        <li>或使用自签名证书（开发环境）</li>
+                        <li>然后通过 <code>https://域名或IP:端口</code> 访问</li>
+                    </ol>
+                    
+                    <h4>方案3：使用上传功能（临时方案）</h4>
+                    <ol>
+                        <li>返回主页面</li>
+                        <li>切换到 <strong>"📁 上传音频文件"</strong> 选项卡</li>
+                        <li>上传预先录制好的音频文件</li>
+                    </ol>
+                    
+                    <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 15px;">
+                        <strong>💡 提示：</strong> MediaRecorder API 是浏览器的安全限制，必须在 HTTPS 或 localhost 下才能使用麦克风。这不是系统Bug，而是浏览器的安全策略。
+                    </div>
+                `;
+            } else if (type === 'api') {
+                content = `
+                    <p><strong>问题：</strong>您的浏览器不支持所需的Web API。</p>
+                    <p><strong>解决方案：</strong></p>
+                    <ol>
+                        <li>更新浏览器到最新版本</li>
+                        <li>使用 Chrome 85+、Firefox 78+、Edge 85+ 或 Safari 14.1+</li>
+                        <li><strong>或者使用"上传音频文件"功能代替录音</strong></li>
+                    </ol>
+                `;
+            } else if (type === 'permission') {
+                if (errorName === 'NotAllowedError') {
+                    content = `
+                        <p><strong>问题：</strong>麦克风权限被拒绝。</p>
+                        <p><strong>解决方案：</strong></p>
+                        <ol>
+                            <li>点击地址栏旁边的 🔒 或 🎤 图标</li>
+                            <li>允许麦克风访问权限</li>
+                            <li>刷新页面重试</li>
+                            <li><strong>或者使用"上传音频文件"功能代替录音</strong></li>
+                        </ol>
+                    `;
+                } else if (errorName === 'NotFoundError') {
+                    content = `
+                        <p><strong>问题：</strong>未检测到麦克风设备。</p>
+                        <p><strong>解决方案：</strong></p>
+                        <ol>
+                            <li>检查麦克风是否正确连接</li>
+                            <li>在系统设置中启用麦克风</li>
+                            <li>重启浏览器</li>
+                            <li><strong>或者使用"上传音频文件"功能代替录音</strong></li>
+                        </ol>
+                    `;
+                }
+            }
+            
+            solutionContent.innerHTML = content;
+            solutions.style.display = 'block';
+        }
+        
+        // 页面加载时执行检测
+        window.addEventListener('DOMContentLoaded', () => {
+            checkBrowser();
+            checkProtocol();
+            checkAPISupport();
+        });
+    </script>
+</body>
+</html>
+

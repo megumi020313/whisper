@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# 模型文件（通常很大，不提交到git）
+models/llm/*/
+!models/llm/README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志
+logs/
+*.log
+
+# 环境变量
+.env
+.env.local
+
+# 临时文件
+*.tmp
+*.bak
+

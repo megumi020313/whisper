@@ -1,0 +1,15 @@
+环境：
+conda activate voice
+
+remote-V2:
+cd remote/remote-v2
+python -m backend.api.app
+http://localhost:8001/docs
+
+python web/app.py
+http://localhost:5004
+
+SMP：
+cd SMP
+python -m backend.api.app
+

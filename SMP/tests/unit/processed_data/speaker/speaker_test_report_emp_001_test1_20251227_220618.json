@@ -1,0 +1,111 @@
+{
+  "test_info": {
+    "test_time": "2025-12-27T22:06:39.160105",
+    "test_audio": "emp_001_test1",
+    "test_audio_path": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test1.wav",
+    "model_path": "/home/swufe/Project/zhoulonghao/SMP/backend/training/models/speechbrain_model_20251215_150150/speaker_embeddings.json",
+    "threshold": 0.85,
+    "sample_rate": 16000
+  },
+  "results": {
+    "total_speakers": 2,
+    "samples_evaluated": 6,
+    "correct": 2,
+    "wrong": 4,
+    "accuracy": 33.33,
+    "target_accuracy": 98,
+    "passed": false
+  },
+  "details": {
+    "all_samples": [
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test1.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.6064,
+        "correct": false
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test2.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.9948,
+        "correct": true
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test3.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.611,
+        "correct": false
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test4.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.855,
+        "correct": true
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_002_test1.wav",
+        "true_id": "emp_002",
+        "predicted_id": "emp_002",
+        "similarity": 0.715,
+        "correct": false
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_002_test2.wav",
+        "true_id": "emp_002",
+        "predicted_id": "emp_002",
+        "similarity": 0.3849,
+        "correct": false
+      }
+    ],
+    "correct_samples": [
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test2.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.9948,
+        "correct": true
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test4.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.855,
+        "correct": true
+      }
+    ],
+    "wrong_samples": [
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test1.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.6064,
+        "correct": false
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_001_test3.wav",
+        "true_id": "emp_001",
+        "predicted_id": "emp_001",
+        "similarity": 0.611,
+        "correct": false
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_002_test1.wav",
+        "true_id": "emp_002",
+        "predicted_id": "emp_002",
+        "similarity": 0.715,
+        "correct": false
+      },
+      {
+        "file": "/home/swufe/Project/zhoulonghao/SMP/tests/utils/test_data/samples/emp_002_test2.wav",
+        "true_id": "emp_002",
+        "predicted_id": "emp_002",
+        "similarity": 0.3849,
+        "correct": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,72 @@
+# Remote-V2 快速使用指南
+
+## 🚀 启动方式
+
+### 方式一：使用启动脚本（推荐，支持自动重启）
+
+**脚本启动 API 服务**：
+```bash
+cd /home/swufe/Project/zhoulonghao/remote/remote-v2
+bash scripts/start_api.sh               #终止：systemctl status pid + sudo systemctl stop [服务名]
+
+**特性**：
+- ✅ 自动激活 conda 环境
+- ✅ 服务崩溃自动重启（3秒延迟）
+- ✅ Web 前端可修改配置并重启
+- ✅ 显示启动和停止时间
+- ✅ Ctrl+C 正常退出
+
+### 方式二：手动启动
+
+**手动启动 API 服务**：
+```bash
+cd /home/swufe/Project/zhoulonghao/remote/remote-v2
+conda activate vioce
+python -m backend.api.app
+```
+
+**或使用 uvicorn（支持热重载）**：
+```bash
+cd /home/swufe/Project/zhoulonghao/remote/remote-v2
+conda activate vioce
+uvicorn backend.api.app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**启动 Web 测试界面**：
+```bash
+cd /home/swufe/Project/zhoulonghao/remote/remote-v2
+conda activate vioce
+python web/app.py
+```
+
+## 🌐 访问地址
+
+- **Web界面**: https://localhost:5001 或 https://10.8.21.33:5001
+- **API文档**: https://localhost:8000/docs 或 https://10.8.21.33:8000/docs
+- **API ReDoc**: https://localhost:8000/redoc
+
+## ⚙️ 参数配置
+
+### Web 前端配置（推荐）
+
+1. 访问 Web 界面
+2. 点击右上角"参数配置"按钮
+3. 修改 `model_config.yaml` 参数
+4. 点击"保存并重启服务"
+5. 等待服务自动重启并刷新页面
+
+**注意**：
+- 使用 `bash scripts/start_api.sh` 启动时，重启功能可以正常工作
+- 手动启动时，重启会导致服务停止，需要手动重新启动
+
+### 手动配置
+
+编辑配置文件：
+```bash
+nano config/model_config.yaml
+```
+
+重启服务使配置生效（如果使用启动脚本，会自动重启）
+
+
+

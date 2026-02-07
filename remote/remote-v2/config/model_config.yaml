@@ -1,0 +1,176 @@
+# ============================================================================
+# 远程声纹识别系统 - 配置文件
+# ============================================================================
+
+# 模型路径配置
+model:
+  eres2netv2_path: models/eres2netv2  # 声纹识别模型路径
+  vad_path: models/vad  # VAD模型路径
+  funasr_model_path: models/paraformer/speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch  # ASR模型路径（FunASR）
+  funasr_vad_model_path: models/paraformer/speech_fsmn_vad_zh-cn-16k-common-pytorch  # FunASR VAD模型路径
+  funasr_punc_model_path: models/paraformer/punc_ct-transformer_zh-cn-common-vocab272727-pytorch  # FunASR 标点模型路径
+
+# 设备分配（AMD显卡使用CPU模式）
+device:
+  speaker_model: cpu  # 声纹识别模型使用的设备
+  vad_model: cpu  # VAD模型使用的设备
+  asr_model: cpu  # ASR模型使用的设备
+  default: cpu  # 默认设备
+
+# VAD（语音活动检测）配置
+vad:
+  threshold: 0.4  # VAD检测阈值（0.0-1.0），越高越严格
+  min_speech_duration_ms: 200  # 最小语音时长（毫秒）
+  min_silence_duration_ms: 200  # 最小静音时长（毫秒），用于判断语音结束
+  speech_pad_ms: 100  # 语音边界填充（毫秒），用于边界判断和合并（方案F：降低以避免重叠）
+
+# 声纹识别配置
+speaker:
+  high_threshold: 10.0  # 高置信度阈值（S-Norm Z-Score），需要重新校准
+  low_threshold: 3.0  # 低置信度阈值（S-Norm Z-Score），低于此值标记为unknown
+  top_k_ratio: 0.15  # Top-K比例
+  batch_size: 64  # 批处理大小，越大越快但占用更多显存
+  
+  # V3.1 滑动窗口声纹流配置
+  sv_window_size_s: 1.5  # 滑动窗口大小（秒），用于生成高分辨率声纹流
+  sv_window_step_s: 0.5  # 滑动窗口步长（秒），控制声纹流密度
+  
+  # V3.1.1 方案F：特征提取专用padding（仅用于提取声纹特征，不影响边界判断）
+  extraction_pad_ms: 300  # 特征提取padding（毫秒），保证充足的上下文
+
+# 音频处理配置
+audio:
+  sample_rate: 16000  # 采样率（Hz）
+  rms_gate_db: -100.0  # RMS能量门限（dB）
+  min_segment_duration: 1.5  # 最小片段时长（秒）
+  max_segment_duration: 30.0  # 最大片段时长（秒）
+  max_audio_duration: null  # 最大音频时长（秒），null表示不限制
+
+# 音频文件配置
+file:
+  max_audio_size: 524288000  # 最大音频文件大小（字节，500MB）
+  allowed_extensions: [".wav", ".mp3", ".mp4", ".m4a", ".webm", ".ogg", ".flac"]  # 允许的音频文件扩展名
+
+# 会话管理配置
+session:
+  max_silence_gap: 15.0  # 最大静音间隙（秒）
+  min_interruption_duration: 0.5  # 最小打断时长（秒）
+  interruption_rms_ratio: 0.3  # 打断能量比例
+  noise_floor: 0.2  # 噪声底噪
+
+# 声纹注册配置
+registration:
+  num_samples: 3  # 建议注册样本数
+  noise_augmentation:
+    enabled: true  # 是否启用噪声增强
+    noise_ratio_min: 0.1  # 最小噪声混合比例
+    noise_ratio_max: 0.3  # 最大噪声混合比例
+  
+  # AS-Norm显著性检测（防止"大众脸"声纹）
+  distinctiveness_check:
+    enabled: true  # 是否启用显著性检测
+    avg_threshold: 0.4  # 平均相似度阈值（超过此值给出警告）
+    max_threshold: 0.7  # 最大相似度阈值（超过此值给出警告）
+    mode: soft_reject  # 模式：soft_reject（软拒绝，给出警告但允许继续）/ hard_reject（硬拒绝）
+
+# 数据存储配置
+storage:
+  # 声纹模板存储
+  vector_db:
+    mode: local  # 存储模式：local（本地文件）, redis（Redis数据库）, hybrid（混合模式）
+    local_path: data/vector_db  # 本地存储路径
+    cohort_path: data/vector_db/cohort.npy  # Cohort样本路径（用于AS-Norm和S-Norm）
+    
+    # AS-Norm / S-Norm 配置
+    as_norm:
+      enabled: true  # 是否启用AS-Norm归一化
+      use_snorm: true  # 是否使用S-Norm（对称归一化，优先级高于AS-Norm）
+      top_k: 450  # Top-K相似度数量（用于统计归一化，约为cohort_size的11.6%）
+      cohort_size: 3887  # Cohort数据集大小（650个说话人，3887个音频）
+      # 注：S-Norm会在注册时自动预计算T-Norm参数，识别时无额外开销
+    
+    redis:
+      enabled: false  # 是否启用Redis
+      host: localhost  # Redis服务器地址
+      port: 6379  # Redis端口
+      db: 0  # Redis数据库编号（0-15）
+      password: null  # Redis密码（可选）
+      timeout: 5  # 连接超时（秒）
+      max_connections: 10  # 最大连接数
+      auto_start: true  # 是否自动启动Redis（仅限本地开发）
+  
+  # 时序数据存储（IoTDB）
+  iotdb:
+    enabled: false  # 是否启用IoTDB
+    host: 127.0.0.1  # IoTDB服务器地址
+    port: 6667  # IoTDB端口
+    username: root  # 用户名
+    password: root  # 密码
+    database: root.store_01  # 数据库路径
+    timeout: 5  # 连接超时（秒）
+
+# 系统配置
+system:
+  device: cpu  # 默认设备（已废弃，请使用device配置段）
+  log_level: INFO  # 日志级别：DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_file: logs/remote-v2.log  # 日志文件路径
+
+# ASR（自动语音识别）配置
+asr:
+  enabled: true  # 是否启用ASR（V3.0需要）
+  language: zh  # 语言代码：zh（中文）, en（英文）, auto（自动检测）
+  initial_prompt: 以下是普通话的句子。  # 初始提示词，引导输出简体中文
+  beam_size: 5  # Beam search大小（保留参数，FunASR不使用）
+  device: cpu  # ASR使用的设备（已废弃，请使用device.asr_model）
+  hotword: null  # ASR热词（可选，例如："四川话 火锅"）
+  batch_size_s: 300  # 单次解码最大时长（秒）
+
+# V3.0 对话智能引擎配置
+diarization:
+  enabled: true  # 是否启用V3.0对话智能引擎
+  time_threshold: 1.5  # 时间间隔阈值（秒），超过此值认为是不同说话人
+  similarity_threshold: 0.7  # 声纹相似度阈值（0.0-1.0），低于此值认为是不同说话人
+  low_confidence_threshold: 2.5  # 低置信度阈值（Z-score），低于此值需要锚点修正
+  max_merge_duration: 10.0  # 最大合并时长（秒），超过此值需要安全校验
+  anchor_correction: true  # 是否启用锚点修正
+  # vad_min_silence_ms: 200  # ❌ V3.1混合模式已废弃：SV直接使用全局VAD生成的optimized_segments（vad.min_silence_duration_ms=300）
+  
+  # V3.1 词-说话人对齐配置（IoU > Center > Score三级决策）
+  alignment_iou_threshold: 0.6  # IoU对齐阈值（0.0-1.0），IoU超过此值直接归属
+  
+  # V3.1.1 方案B：ASR过滤容忍度配置（放宽VAD过滤，避免丢失真实语音词）
+  asr_filter_iou_threshold: 0.3  # ASR词与VAD segment的最小IoU重叠阈值（0.0-1.0）
+  asr_filter_boundary_tolerance_ms: 100  # ASR词与VAD segment边界的容忍距离（毫秒）
+  
+  # V3.1.1 重叠质量检查（激活仲裁流程的关键参数）
+  min_overlap_ratio: 0.4  # 最小重叠率阈值（0.0-1.0），低于此值的重叠被视为"低质量重叠"，进入仲裁流程
+  
+  # V3.2 词-说话人对齐的声纹验证（时间+声纹双重验证）
+  min_similarity_for_alignment: 0.65  # 词级别声纹相似度阈值（0.0-1.0），词的声纹必须与重叠的SV分段声纹达到此相似度才确认归属
+  
+  # V3.3 两阶段校正（边界校正）- 分段动态梯度决策
+  boundary_correction:
+    enabled: true  # 是否启用边界校正（解决说话人切换边界的归属错误）
+    window_s: 1.5  # 边界嫌疑区的窗口大小（秒），在边界前N秒的词将被重新评估
+    
+    # 分段动态梯度参数
+    base_diff: 0.08  # 基础阈值（边界处position=1.0时的最低要求）
+    penalty_factor: 0.2  # 惩罚因子（控制梯度陡峭程度，越小越平缓）
+    out_of_zone_threshold: 0.35  # 区外固定阈值（position<0时使用，保护正常词）
+    
+    # 分段动态梯度公式:
+    # - position < 0 (区外): required_diff = out_of_zone_threshold (固定高阈值)
+    # - position >= 0 (区内): required_diff = base_diff + penalty_factor * (1 - position)
+    # 
+    # 调优建议:
+    # - base_diff: 降低可提高边界处的灵敏度（建议范围: 0.05-0.10）
+    # - penalty_factor: 降低可使梯度更平缓（建议范围: 0.15-0.30）
+    # - out_of_zone_threshold: 提高可更严格保护区外词（建议范围: 0.30-0.40）
+  
+  # V3.4 平滑修正（三明治法则）- 修复A->B->A短时跳变
+  smoothing_duration_threshold: 0.8  # 时长阈值（秒），低于此值的夹心词将被修正
+
+  # V3.5 短词声纹覆盖（结构性修正）
+  voiceprint_override_min_diff: 0.25  # 声纹差值阈值（越大越保守）
+  voiceprint_override_min_duration: 0.2  # 最短词时长（秒）
+  voiceprint_override_max_duration: 0.8  # 最长词时长（秒）
