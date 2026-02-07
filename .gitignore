@@ -7,3 +7,10 @@
 
 # Ignore audio
 *.wav
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local vector DB
+/remote/remote-v2/data/vector_db/
